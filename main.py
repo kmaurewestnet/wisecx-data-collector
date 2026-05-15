@@ -103,6 +103,7 @@ class DataCollector:
 
                 page = 1
                 total_responses = 0
+                max_pages = int(os.getenv('MAX_PAGES', '50'))
                 while True:
                     try:
                         responses = self.api.get_survey_responses(
@@ -126,6 +127,9 @@ class DataCollector:
 
                     if len(responses) < self.batch_size:
                         break  # last page
+                    if page >= max_pages:
+                        logger.info(f"Survey {survey_id}: reached MAX_PAGES={max_pages}, stopping")
+                        break
                     page += 1
 
                 if total_responses > 0:
