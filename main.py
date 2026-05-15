@@ -90,7 +90,7 @@ class DataCollector:
         return bool(content)
 
     def process_survey_batch(self, surveys: List[Dict]) -> None:
-        """Process a batch of surveys."""
+        """Process a batch of surveys, fetching all pages of responses."""
         for survey in surveys:
             try:
                 survey_id = survey['id']
@@ -101,32 +101,35 @@ class DataCollector:
                     logger.error(f"Failed to save survey {survey_id}")
                     continue
 
-                try:
-                    responses = self.api.get_survey_responses(
-                        survey_id, limit=self.batch_size, page=1
-                    )
-                except WiseCXAPIError as e:
-                    logger.error(f"API error getting responses for survey {survey_id}: {str(e)}")
-                    continue
-                except Exception as e:
-                    logger.error(f"Unexpected error getting responses for survey {survey_id}: {str(e)}")
-                    continue
+                page = 1
+                total_responses = 0
+                while True:
+                    try:
+                        responses = self.api.get_survey_responses(
+                            survey_id, limit=self.batch_size, page=page
+                        )
+                    except WiseCXAPIError as e:
+                        logger.error(f"API error getting responses for survey {survey_id} page {page}: {str(e)}")
+                        break
+                    except Exception as e:
+                        logger.error(f"Unexpected error getting responses for survey {survey_id} page {page}: {str(e)}")
+                        break
 
-                if not responses:
-                    logger.info(f"No responses found for survey {survey_id}")
-                    continue
+                    if not responses:
+                        if page == 1:
+                            logger.info(f"No responses found for survey {survey_id}")
+                        break
 
-                if len(responses) >= self.batch_size:
-                    logger.warning(
-                        f"Survey {survey_id} returned {len(responses)} responses "
-                        f"(= batch_size limit). There may be additional pages not collected."
-                    )
-                else:
-                    logger.info(f"Found {len(responses)} responses for survey {survey_id}")
+                    total_responses += len(responses)
+                    logger.info(f"Survey {survey_id} page {page}: {len(responses)} responses")
+                    self.process_response_batch(responses, str(survey_id))
 
-                for i in range(0, len(responses), self.batch_size):
-                    batch = responses[i:i + self.batch_size]
-                    self.process_response_batch(batch, survey_id)
+                    if len(responses) < self.batch_size:
+                        break  # last page
+                    page += 1
+
+                if total_responses > 0:
+                    logger.info(f"Survey {survey_id}: {total_responses} total responses processed ({page} pages)")
 
             except WiseCXAPIError as e:
                 logger.error(f"API error processing survey {survey['id']}: {str(e)}")
