@@ -259,7 +259,8 @@ class DatabaseManager:
                 else:
                     responses = raw
 
-                if not responses:
+                # Allow empty answers when status=responded (acknowledged but no answers given)
+                if not responses and response_data.get('status') != 'responded':
                     logger.warning(f"Skipping survey response {wise_id} - empty responses after normalisation")
                     return None
 

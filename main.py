@@ -71,21 +71,22 @@ class DataCollector:
         logger.info(f"[DIAG] First survey response sample: {sample}")
 
     def _has_valid_responses(self, response_data: Dict) -> bool:
-        """Check if a survey response contains non-empty answer data."""
-        content, field_name = _get_response_content(response_data)
+        """Return True if this response record is worth saving.
 
+        A 'responded' record is always saved — it represents a meaningful event
+        (survey delivered and acknowledged) even when answers are empty.
+        A 'not_responded' record is only saved if it has actual answer content.
+        """
+        if response_data.get('status') == 'responded':
+            return True
+
+        content, _ = _get_response_content(response_data)
         if not content:
             return False
-
         if isinstance(content, list):
-            return any(
-                isinstance(item, dict) and item.get('response')
-                for item in content
-            )
-
+            return any(isinstance(item, dict) and item.get('response') for item in content)
         if isinstance(content, dict):
             return len(content) > 0
-
         return bool(content)
 
     def process_survey_batch(self, surveys: List[Dict]) -> None:
