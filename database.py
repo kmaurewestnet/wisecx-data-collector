@@ -192,11 +192,25 @@ class DatabaseManager:
 
                 created_at = _parse_datetime(case_data.get('created_at'), f"case {case_id} created_at")
 
+                # Only set contact_id if the contact already exists in our DB.
+                # The case's contact_id may differ from the survey response contact
+                # and the API may return 400 for contacts we cannot fetch.
+                raw_contact_id = str(case_data['contact_id']) if case_data.get('contact_id') else None
+                if raw_contact_id:
+                    contact_exists = session.query(
+                        session.query(Contact).filter_by(wise_id=raw_contact_id).exists()
+                    ).scalar()
+                    if not contact_exists:
+                        logger.warning(
+                            f"Case {case_id}: contact {raw_contact_id} not in DB, saving case without contact_id"
+                        )
+                        raw_contact_id = None
+
                 params = {
                     'case_id': case_id,
                     'group_id': case_data.get('group_id'),
                     'number': str(case_data.get('number')) if case_data.get('number') is not None else None,
-                    'contact_id': str(case_data.get('contact_id')) if case_data.get('contact_id') else None,
+                    'contact_id': raw_contact_id,
                     'customer_id': str(case_data.get('customer_id')) if case_data.get('customer_id') else None,
                     'status': case_data.get('status'),
                     'tags': case_data.get('tags', []),
