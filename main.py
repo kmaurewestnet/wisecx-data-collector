@@ -142,6 +142,12 @@ class DataCollector:
                 self._log_response_structure(response)
 
                 response_id = _get_response_id(response)
+
+                # Skip surveys sent but not yet answered
+                if response.get('status') == 'not_responded':
+                    logger.debug(f"Skipping response {response_id} - not yet responded")
+                    continue
+
                 if not self._has_valid_responses(response):
                     logger.warning(f"Skipping response {response_id} - empty or invalid responses")
                     continue

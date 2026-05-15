@@ -180,7 +180,8 @@ class WiseCXAPI:
         The API returns HTTP 400 with 'Survey Responses Not Found' when the survey
         has no responses — this is treated as an empty list, not an error.
         """
-        params = {'limit': limit, 'page': page}
+        # Only fetch responded surveys; 'not_responded' entries have empty answers
+        params = {'limit': limit, 'page': page, 'status': 'responded'}
         logger.info(f"Getting responses for survey {survey_id}, page {page}, limit {limit}")
 
         try:

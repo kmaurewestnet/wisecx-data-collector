@@ -242,8 +242,13 @@ class DatabaseManager:
                     response_data.get('responded_at'), f"response {wise_id} responded_at"
                 )
 
-                # Normalise response content: try 'responses' first, then 'response'
-                raw = response_data.get('responses') or response_data.get('response') or {}
+                # Normalise response content: try known field names in order
+                raw = (
+                    response_data.get('responses')
+                    or response_data.get('answers')
+                    or response_data.get('response')
+                    or {}
+                )
                 if isinstance(raw, list):
                     # Convert [{guid, response}, ...] to {guid: response, ...}
                     responses = {
